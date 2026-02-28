@@ -2,12 +2,9 @@ FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt update -y && apt install --no-install-recommends -y xfce4 xfce4-goodies tigervnc-standalone-server novnc websockify sudo xterm init systemd snapd vim net-tools curl wget git tzdata gnupg
+RUN apt update -y && apt install --no-install-recommends -y xfce4 xfce4-goodies tigervnc-standalone-server novnc websockify sudo xterm init systemd snapd vim net-tools curl wget git tzdata gnupg openssh-server
 RUN apt update -y && apt install -y dbus-x11 x11-utils x11-xserver-utils x11-apps
 RUN apt install software-properties-common -y
-
-RUN echo "root:root" | chpasswd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
 RUN add-apt-repository ppa:mozillateam/ppa -y
 RUN echo 'Package: *' >> /etc/apt/preferences.d/mozilla-firefox
@@ -21,5 +18,4 @@ RUN touch /root/.Xauthority
 EXPOSE 5901
 EXPOSE 6080
 
-# Added hostname dragon and kept your original VNC/Websockify commands
-CMD bash -c "echo 'dragon' > /etc/hostname && hostname dragon 2>/dev/null || true && vncserver -localhost no -SecurityTypes None -geometry 1024x768 --I-KNOW-THIS-IS-INSECURE && openssl req -new -subj '/C=JP' -x509 -days 365 -nodes -out self.pem -keyout self.pem && websockify -D --web=/usr/share/novnc/ --cert=self.pem 6080 localhost:5901 && tail -f /dev/null"
+CMD bash -c "echo 'root:root' | chpasswd && echo 'dragon' > /etc/hostname && hostname dragon 2>/dev/null || true && vncserver -localhost no -SecurityTypes None -geometry 1024x768 --I-KNOW-THIS-IS-INSECURE && openssl req -new -subj '/C=JP' -x509 -days 365 -nodes -out self.pem -keyout self.pem && websockify -D --web=/usr/share/novnc/ --cert=self.pem 6080 localhost:5901 && tail -f /dev/null"
