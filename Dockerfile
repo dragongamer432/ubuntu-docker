@@ -1,44 +1,33 @@
-FROM debian:trixie-slim
+FROM ubuntu:22.04
 
-# Identity & Environment
 ENV DEBIAN_FRONTEND=noninteractive
-ENV HOME=/root
+ENV HOSTNAME=dragon
 ENV USER=root
+ENV HOME=/root
 ENV SHELL=/bin/bash
-ENV TERM=xterm
 
-# 1. Install Full VPS Suite (Desktop, SSH, Admin Tools)
-RUN apt update -y && apt install --no-install-recommends -y \
-    xfce4 xfce4-goodies tigervnc-standalone-server novnc websockify \
-    sudo vim net-tools curl wget git tzdata gnupg openssh-server \
-    dbus-x11 x11-utils x11-xserver-utils x11-apps \
-    ca-certificates procps firefox-esr \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tigervnc-standalone-server novnc websockify \
+    ca-certificates curl wget git sudo docker.io htop btop neovim lsof \
+    qemu-system cloud-image-utils xterm fluxbox dbus-x11 x11-xserver-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Force Hostname & Shell Identity (The "Real VPS" Prompt)
 RUN echo "dragon" > /etc/hostname && \
     echo "export PS1='root@dragon:\w\# '" >> /root/.bashrc && \
-    echo "alias ll='ls -la'" >> /root/.bashrc
-
-# 3. Secure Root Access & SSH Configuration
-RUN mkdir -p /var/run/sshd && \
     echo "root:root" | chpasswd && \
-    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
-    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
-    touch /root/.Xauthority
+    mkdir -p /root/.vnc && \
+    echo "password" | vncpasswd -f > /root/.vnc/passwd && \
+    chmod 600 /root/.vnc/passwd
 
-# Expose Web GUI (6080) and SSH (22)
-EXPOSE 6080 22
+WORKDIR /workspace
 
-# 4. Universal Startup: Forces dragon identity and starts background services
+EXPOSE 6080 7860 22
+
 CMD bash -c "\
     echo '127.0.0.1 dragon' >> /etc/hosts && \
     hostname dragon 2>/dev/null || true && \
-    /usr/sbin/sshd && \
     vncserver -localhost no -SecurityTypes None -geometry 1280x720 --I-KNOW-THIS-IS-INSECURE :1 && \
+    DISPLAY=:1 fluxbox & \
+    DISPLAY=:1 xterm -geometry 1280x720 -fullscreen -sb -T 'Dragon VPS Terminal' -e /bin/bash & \
     openssl req -new -subj '/C=JP' -x509 -days 365 -nodes -out self.pem -keyout self.pem && \
-    websockify --web=/usr/share/novnc/ --cert=self.pem 6080 localhost:5901 && \
-    echo '------------------------------------------------' && \
-    echo 'DEBIAN 13 VPS ONLINE | USER: root | PASS: root' && \
-    echo '------------------------------------------------' && \
-    tail -f /dev/null"
+    websockify --web=/usr/share/novnc/ --cert=self.pem 6080 localhost:5901"
